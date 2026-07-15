@@ -1,17 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
-// NOTE: These are placeholder faces. The design system (Prompt 0.5) replaces
-// them with Fraunces (story text) + Inter (UI chrome).
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// The two — and only two — typefaces in Moments.
+// Fraunces carries the product's personality: anything the teller wrote or said.
+// Optical sizing is enabled via `font-optical-sizing: auto` in globals.css.
+const fraunces = Fraunces({
   subsets: ["latin"],
+  variable: "--font-fraunces",
+  axes: ["opsz"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Inter is UI chrome only — labels, buttons, meta. Never story content.
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -32,11 +38,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: "#b3572f", // terracotta — the one accent
+          borderRadius: "14px",
+        },
+      }}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
+      <html
+        lang="en"
+        className={`${fraunces.variable} ${inter.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -52,11 +52,24 @@ primitives live in `/components/ui`.
 
 ## Project conventions
 
-- **Stack:** Next.js (App Router) + TypeScript + Tailwind CSS v4, Supabase
-  (Postgres, magic-link auth, Storage, RLS), deployed on Vercel.
-- **Supabase clients:** `lib/supabase/client.ts` (browser),
-  `lib/supabase/server.ts` (server + service-role). The service-role client
-  bypasses RLS and must never be imported into client code.
-- **Routes:** `/` landing, `/new` create, `/stories` my stories,
-  `/story/[id]` edit/preview, `/s/[token]` recipient view.
-- **Env:** see `.env.local.example`. Never commit `.env.local`.
+- **Stack:** Next.js (App Router) + TypeScript + Tailwind CSS v4, deployed on
+  Vercel. **DB:** Neon Postgres via **Drizzle ORM**. **Auth:** **Clerk**
+  (email magic link). **Storage:** **Vercel Blob** (audio + photos).
+  (The spec names Supabase; we substituted this stack — same relational model,
+  same guarantees.)
+- **Access control:** there is no Postgres RLS (that was a Supabase-auth
+  feature). Ownership is enforced in the **server layer** — every query is
+  scoped to the Clerk user id via `lib/auth.ts` (`requireUserId`,
+  `ensureProfile`). Never trust a client-supplied owner id.
+- **DB:** schema in `db/schema.ts`, client in `db/index.ts`, SQL migrations in
+  `db/migrations/`. Commands: `npm run db:generate` (after schema edits),
+  `db:migrate`, `db:push`, `db:studio`, `db:seed`.
+- **Storage:** `lib/blob.ts`. Blob URLs are unguessable and treated as secrets;
+  a URL is only handed to a client after the server authorizes the request
+  (owner, or recipient with a valid share token). Deleting a story removes its
+  blobs first, then the row (see `lib/actions/stories.ts` `deleteStory`).
+- **Routes:** `/` landing, `/new` create, `/stories` my stories (post-sign-in
+  landing), `/story/[id]` edit/preview, `/s/[token]` recipient view,
+  `/sign-in`, `/sign-up`, `/dev/ui` design workbench.
+- **Env:** see `.env.local.example`. Never commit `.env.local`. Clerk dashboard:
+  enable email **magic link** as the sign-in method.

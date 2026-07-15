@@ -257,7 +257,7 @@ export function CaptureFlow({
         <Button
           variant={readyCount > 0 ? "primary" : "quiet"}
           disabled={readyCount === 0}
-          onClick={() => router.push(`/story/${storyId}`)}
+          onClick={() => router.push(`/new/${storyId}/interview`)}
         >
           Continue
         </Button>

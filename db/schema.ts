@@ -46,6 +46,18 @@ export const profiles = pgTable("profiles", {
 });
 
 /* -------------------------------------------------------------- stories */
+// Confirmed extracted context (spec §4 step 4). Every field is a SUGGESTION the
+// user confirmed — never auto-saved. timeframe/occasion/first place are also
+// mirrored to the dedicated columns for the experience-page title card.
+export type StoryContext = {
+  people?: string[];
+  places?: string[];
+  timeframe?: string;
+  occasion?: string;
+  emotionalTone?: string;
+  notableObjects?: string[];
+};
+
 export const stories = pgTable("stories", {
   id: uuid("id").primaryKey().defaultRandom(),
   ownerId: text("owner_id")
@@ -58,6 +70,7 @@ export const stories = pgTable("stories", {
   locationText: text("location_text"),
   selectedVersion: versionKind("selected_version"),
   musicTrackId: text("music_track_id"),
+  contextJson: jsonb("context_json").$type<StoryContext>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -78,3 +78,10 @@ export const PHOTO_MATCHER_SYSTEM = `Assign each photo to the story section it m
 captions, EXIF datetime, and section content. If no good match exists, assign
 null rather than forcing one. These are suggestions the user can override.
 Return ONLY JSON: {"assignments": [{"media_id": "", "section_id": null}]}`;
+
+export function photoMatcherPrompt(
+  sections: Array<{ id: string; text: string }>,
+  photos: Array<{ media_id: string; caption?: string; exif_datetime?: string }>,
+): string {
+  return `SECTIONS:\n${JSON.stringify(sections)}\n\nPHOTOS:\n${JSON.stringify(photos)}`;
+}

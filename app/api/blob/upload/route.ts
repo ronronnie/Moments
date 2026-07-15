@@ -35,14 +35,24 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         return {
           allowedContentTypes: [
+            // audio segments
             "audio/webm",
             "audio/mp4",
             "audio/mpeg",
             "audio/aac",
             "audio/ogg",
             "audio/wav",
+            // photos + short clips (spec F6)
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/heic",
+            "image/heif",
+            "video/mp4",
+            "video/quicktime",
+            "video/webm",
           ],
-          maximumSizeInBytes: 30 * 1024 * 1024, // ~30MB, well over 10 min of speech
+          maximumSizeInBytes: 50 * 1024 * 1024, // audio + compressed media
           addRandomSuffix: true,
           tokenPayload: JSON.stringify({ storyId }),
         };

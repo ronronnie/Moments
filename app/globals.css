@@ -1,24 +1,149 @@
 @import "tailwindcss";
 
-/*
- * Base "paper & ink" tokens. The full design system (Prompt 0.5) expands these
- * into the complete palette, typography scale, and motion tokens. Per the
- * standing rules: never pure #fff or #000 anywhere.
- */
+/* ==========================================================================
+   Moments design system — "paper & ink" + "quiet cinema"
+   Tailwind v4 is CSS-first: these @theme tokens generate utilities
+   (bg-paper, text-ink, border-hairline, rounded-card, ease-keepsake, …).
+   Reference feeling: a hardcover keepsake book and a quiet cinema — not an app.
+   ========================================================================== */
+
+@theme {
+  /* ---- Color: paper & ink (creation flow, light) ---- */
+  --color-paper: #faf7f2; /* ivory — primary surface */
+  --color-paper-raised: #fefcf8; /* cards / raised surfaces (never pure #fff) */
+  --color-ink: #211d18; /* warm ink — body & titles (15.7:1 on paper) */
+  --color-ink-soft: #6b645a; /* meta, secondary text (5.5:1 — AA) */
+  --color-ink-faint: #8a8175; /* decorative / disabled only (not for body text) */
+  --color-hairline: #e8e1d6; /* 1px borders */
+
+  /* ---- Color: the one accent — terracotta ---- */
+  --color-accent: #c4643b; /* identity: focus rings, quiet accents */
+  --color-accent-strong: #b3572f; /* primary-button fill (4.55:1 with paper text — AA) */
+  --color-accent-press: #a84f2a; /* pressed state */
+
+  /* ---- Color: muted semantics ---- */
+  --color-success: #5e6b4a; /* sage (5.3:1 — AA) */
+  --color-error: #a34531; /* clay (5.7:1 — AA) */
+
+  /* ---- Color: quiet cinema (playback / experience page, dark) ---- */
+  --color-cinema: #121110; /* near-black, warm undertone */
+  --color-cinema-raised: #1c1a17;
+  --color-cinema-text: #f5efe6; /* story text on cinema (16.5:1) */
+  --color-cinema-dim: rgba(245, 239, 230, 0.4); /* neighboring caption phrases */
+
+  /* Back-compat aliases (early scaffold used background/foreground) */
+  --color-background: var(--color-paper);
+  --color-foreground: var(--color-ink);
+
+  /* ---- Typography — exactly two faces ---- */
+  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+
+  /* Story text is the hero (playback captions) */
+  --text-story: 30px;
+  --text-story--line-height: 1.4;
+
+  /* ---- Radii ---- */
+  --radius-button: 14px;
+  --radius-card: 16px;
+
+  /* ---- One soft shadow tier ---- */
+  --shadow-soft: 0 1px 2px rgba(33, 29, 24, 0.04),
+    0 8px 24px rgba(33, 29, 24, 0.06);
+
+  /* ---- Motion — slow and deliberate, never bouncy ---- */
+  --ease-keepsake: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ---- Keepsake animations ---- */
+  --animate-breathe: breathe 4s var(--ease-keepsake) infinite;
+  --animate-ripple: ripple 2s var(--ease-keepsake) infinite;
+  --animate-rise-in: rise-in 400ms var(--ease-keepsake) both;
+  --animate-spin-slow: spin 900ms linear infinite;
+  --animate-indeterminate: indeterminate 1.6s var(--ease-keepsake) infinite;
+}
+
+/* Motion timing tokens (used inline in components/keyframes) */
 :root {
-  --background: #faf7f2; /* ivory */
-  --foreground: #211d18; /* warm ink */
+  --dur-ui-fast: 300ms;
+  --dur-ui: 400ms;
+  --dur-ui-slow: 500ms;
+  --dur-story: 1000ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ---- Keyframes ---- */
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
 }
 
+@keyframes ripple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(196, 100, 59, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 22px rgba(196, 100, 59, 0);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes indeterminate {
+  0% {
+    left: -40%;
+    width: 40%;
+  }
+  50% {
+    width: 55%;
+  }
+  100% {
+    left: 100%;
+    width: 40%;
+  }
+}
+
+/* ---- Base ---- */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Story / display content always uses Fraunces. */
+.font-serif {
+  font-optical-sizing: auto;
+}
+
+/* Consistent, accessible focus: terracotta ring, 2px offset over paper. */
+:where(a, button, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Full prefers-reduced-motion support: swap all motion for opacity only. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

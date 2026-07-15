@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -137,7 +138,11 @@ export const storyVersions = pgTable("story_versions", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-}, (t) => [index("story_versions_story_id_idx").on(t.storyId)]);
+}, (t) => [
+  index("story_versions_story_id_idx").on(t.storyId),
+  // One row per (story, kind) — prevents duplicates when generation races.
+  unique("story_versions_story_kind_uq").on(t.storyId, t.kind),
+]);
 
 /* ---------------------------------------------------------------- media */
 export const media = pgTable("media", {

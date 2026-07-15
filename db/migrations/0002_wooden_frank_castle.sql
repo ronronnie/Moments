@@ -1,0 +1,1 @@
+ALTER TABLE "story_versions" ADD CONSTRAINT "story_versions_story_kind_uq" UNIQUE("story_id","kind");

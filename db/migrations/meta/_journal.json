@@ -15,6 +15,13 @@
       "when": 1784138797657,
       "tag": "0001_solid_grandmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784141753067,
+      "tag": "0002_wooden_frank_castle",
+      "breakpoints": true
     }
   ]
 }

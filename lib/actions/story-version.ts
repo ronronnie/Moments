@@ -160,10 +160,32 @@ export async function generateVersions(storyId: string): Promise<{
   if (sections.length === 0) sections = await fallbackExactSections(storyId);
   if (sections.length === 0) return { exact: null, polished: null };
 
-  [exact] = await db
+  // Conflict-safe: if a concurrent request already inserted the exact version
+  // (unique on story_id + kind), reuse it rather than erroring or duplicating.
+  const insertedExact = await db
     .insert(storyVersions)
     .values({ storyId, kind: "exact", title, pullQuote: pullQuote || null, sectionsJson: sections })
+    .onConflictDoNothing({ target: [storyVersions.storyId, storyVersions.kind] })
     .returning();
+  exact =
+    insertedExact[0] ??
+    (
+      await db
+        .select()
+        .from(storyVersions)
+        .where(and(eq(storyVersions.storyId, storyId), eq(storyVersions.kind, "exact")))
+    )[0] ??
+    null;
+  if (!exact) return { exact: null, polished: null };
+  // A concurrent request won the race and is generating polished too — return
+  // what exists rather than duplicating the LLM work.
+  if (!insertedExact[0]) {
+    const [existingPolished] = await db
+      .select()
+      .from(storyVersions)
+      .where(and(eq(storyVersions.storyId, storyId), eq(storyVersions.kind, "polished")));
+    return { exact, polished: existingPolished ?? null };
+  }
 
   // ---- Polished (Polisher; skipped if unavailable) ----
   try {
@@ -182,7 +204,7 @@ export async function generateVersions(storyId: string): Promise<{
         ...s,
         text: byId.get(s.id)?.trim() || s.text,
       }));
-      [polished] = await db
+      const insertedPolished = await db
         .insert(storyVersions)
         .values({
           storyId,
@@ -191,7 +213,9 @@ export async function generateVersions(storyId: string): Promise<{
           pullQuote: out.pull_quote?.trim() || pullQuote || null,
           sectionsJson: polishedSections,
         })
+        .onConflictDoNothing({ target: [storyVersions.storyId, storyVersions.kind] })
         .returning();
+      polished = insertedPolished[0] ?? polished;
     }
   } catch (err) {
     console.error("generateVersions: polisher failed, exact only", err);

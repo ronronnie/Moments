@@ -10,6 +10,10 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/dev/(.*)", // design system workbench
   "/api/webhooks/(.*)",
+  // Blob client-upload endpoint: Vercel's upload-completed callback has no
+  // Clerk cookies, so the route is public and enforces auth inside the
+  // token-generation step instead.
+  "/api/blob/(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

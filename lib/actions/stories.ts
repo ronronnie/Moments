@@ -2,10 +2,46 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { media, reactions, recordings, stories } from "@/db/schema";
 import { deleteBlobs } from "@/lib/blob";
-import { requireUserId } from "@/lib/auth";
+import { ensureProfile, requireUserId } from "@/lib/auth";
+
+/**
+ * Step 1 of the creator flow: capture the working title and create a draft
+ * story, then move the teller into the recording screen. ensureProfile first
+ * because stories.owner_id references profiles.id.
+ */
+export async function createDraftStory(formData: FormData): Promise<void> {
+  const userId = await ensureProfile();
+  const rawTitle = String(formData.get("title") ?? "").trim();
+
+  const [story] = await db
+    .insert(stories)
+    .values({
+      ownerId: userId,
+      title: rawTitle.length > 0 ? rawTitle : null,
+      status: "draft",
+    })
+    .returning({ id: stories.id });
+
+  redirect(`/new/${story.id}`);
+}
+
+/** Autosave the title as it's edited on the recording screen. */
+export async function updateStoryTitle(
+  storyId: string,
+  title: string,
+): Promise<void> {
+  const userId = await requireUserId();
+  const trimmed = title.trim();
+
+  await db
+    .update(stories)
+    .set({ title: trimmed.length > 0 ? trimmed : null, updatedAt: new Date() })
+    .where(and(eq(stories.id, storyId), eq(stories.ownerId, userId)));
+}
 
 /**
  * Delete a story completely: every DB row AND every stored object.

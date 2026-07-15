@@ -52,14 +52,27 @@ Input: array of {w, start, end} word objects.
 Return ONLY JSON: {"title": "", "pull_quote": "", "sections":
 [{"start_s": 0, "end_s": 0, "summary_label": ""}]}`;
 
+export function structurerPrompt(
+  words: Array<{ w: string; start: number; end: number }>,
+): string {
+  return `WORDS:\n${JSON.stringify(words)}`;
+}
+
 export const POLISHER_SYSTEM = `Rewrite this personal memory for clarity and flow. Hard rules:
 - First person, preserving the teller's personality, idiom, and emotional tone.
 - NEVER add facts, names, dialogue, places, or events not in the original.
 - Remove repetition and false starts; keep distinctive phrasing exactly as
   spoken — that's their voice, not an error.
-- Keep the same section structure. Aim for spoken-aloud rhythm, not essay prose.
+- Keep the same section structure and the same section ids. Aim for
+  spoken-aloud rhythm, not essay prose.
 Return ONLY JSON: {"title": "", "pull_quote": "", "sections":
 [{"id": "", "text": ""}]}`;
+
+export function polisherPrompt(
+  sections: Array<{ id: string; text: string }>,
+): string {
+  return `SECTIONS:\n${JSON.stringify(sections)}`;
+}
 
 export const PHOTO_MATCHER_SYSTEM = `Assign each photo to the story section it most likely illustrates, using
 captions, EXIF datetime, and section content. If no good match exists, assign

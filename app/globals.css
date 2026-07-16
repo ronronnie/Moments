@@ -115,6 +115,88 @@
   }
 }
 
+/* ==========================================================================
+   Experience page (spec F7) — the cinematic playback surface.
+   ========================================================================== */
+
+/* Slow Ken Burns push on section photos; transform-origin varies per photo. */
+@keyframes kenburns {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.16);
+  }
+}
+.kenburns {
+  animation: kenburns 26s var(--ease-keepsake) both;
+  will-change: transform;
+}
+
+/* Title / closing card entrance: a slow, weightless fade + rise. */
+@keyframes titleIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reading along by candlelight: current phrase full warmth, neighbours dimmed.
+   Never karaoke — whole phrases ease between states, words never bounce. */
+.caption-line {
+  opacity: 0.36;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  text-wrap: balance;
+  color: var(--color-cinema-text);
+  transition:
+    opacity 500ms var(--ease-keepsake),
+    font-size 500ms var(--ease-keepsake);
+}
+.caption-line[data-active="true"] {
+  opacity: 1;
+  font-size: var(--text-story);
+}
+
+/* Small-caps meta (teller name, date/place) — Inter, letter-spaced. */
+.small-caps {
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* The one thin control allowed over the photo during playback. */
+.scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(245, 239, 230, 0.25);
+  cursor: pointer;
+}
+.scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-cinema-text);
+  box-shadow: 0 0 0 6px rgba(245, 239, 230, 0.08);
+}
+.scrub::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-cinema-text);
+}
+
 /* ---- Base ---- */
 body {
   background: var(--color-paper);

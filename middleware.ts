@@ -14,6 +14,8 @@ const isPublicRoute = createRouteMatcher([
   // Clerk cookies, so the route is public and enforces auth inside the
   // token-generation step instead.
   "/api/blob/(.*)",
+  // Recipient voice-reply upload: authorized by share token, not an account.
+  "/api/reactions/(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

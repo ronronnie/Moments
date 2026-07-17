@@ -1,10 +1,12 @@
 import { getExperienceByToken } from "@/lib/experience";
+import { recordShareView } from "@/lib/reactions";
 import { ExperiencePlayer } from "@/components/experience/ExperiencePlayer";
 
 // Recipient view (/s/[token]) — no account, no signup wall (spec F8). Access is
 // authorized only by a valid, un-revoked share token, resolved server-side
-// (standing rule 3). This renders the same experience player as the owner
-// preview. Reactions, view counting, and owner notifications arrive in Prompt 7.
+// (standing rule 3). Renders the same experience player as the owner preview,
+// with the reaction loop enabled. Counts the view and emails the owner on the
+// first open (best-effort, inside recordShareView).
 export default async function SharedStoryPage({
   params,
 }: {
@@ -15,7 +17,9 @@ export default async function SharedStoryPage({
 
   if (!data) return <Unavailable />;
 
-  return <ExperiencePlayer data={data} mode="recipient" />;
+  await recordShareView(token);
+
+  return <ExperiencePlayer data={data} mode="recipient" token={token} />;
 }
 
 function Unavailable() {

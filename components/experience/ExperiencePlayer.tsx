@@ -9,6 +9,7 @@ import type {
 import { MUSIC_TRACKS } from "@/lib/music";
 import { selectMusicTrack } from "@/lib/actions/experience";
 import { cn } from "@/lib/cn";
+import { ReactionComposer } from "./ReactionComposer";
 import { useMusic } from "./useMusic";
 import { useTimeline } from "./useTimeline";
 
@@ -25,12 +26,22 @@ type Mode = "owner" | "recipient";
 export function ExperiencePlayer({
   data,
   mode,
+  token,
+  pins = [],
 }: {
   data: ExperienceData;
   mode: Mode;
+  /** Recipient share token — enables the reaction loop (recipient mode only). */
+  token?: string;
+  /** Pinned reaction timestamps (seconds) shown as scrub-bar ticks (owner). */
+  pins?: number[];
 }) {
   const timeline = useTimeline(data.segments, data.totalS);
   const { t, playing, started, ended } = timeline;
+  const canReact = mode === "recipient" && !!token;
+
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [pinAt, setPinAt] = useState<number | null>(null);
 
   const [musicId, setMusicId] = useState<string | null>(data.music?.id ?? null);
   const musicUrl = useMemo(
@@ -93,6 +104,18 @@ export function ExperiencePlayer({
     [data.storyId],
   );
 
+  // Open the reaction composer, pausing so the moment holds. `pin` is the
+  // timestamp it's tied to (mid-story), or null from the closing card.
+  const openReaction = useCallback(
+    (pin: number | null) => {
+      setPinAt(pin);
+      setComposerOpen(true);
+      timeline.pause();
+      reveal();
+    },
+    [timeline, reveal],
+  );
+
   return (
     <div className="relative h-dvh w-full select-none overflow-hidden bg-cinema text-cinema-text">
       {/* ---------------------------------------------------- photo backdrops */}
@@ -144,7 +167,11 @@ export function ExperiencePlayer({
 
       {/* -------------------------------------------------------- closing card */}
       {ended && (
-        <ClosingCard data={data} onReplay={replay} />
+        <ClosingCard
+          data={data}
+          onReplay={replay}
+          onReact={canReact ? () => openReaction(null) : undefined}
+        />
       )}
 
       {/* ------------------------------------------------------------- chrome */}
@@ -165,6 +192,14 @@ export function ExperiencePlayer({
           <span />
         )}
         <div className="flex items-center gap-2">
+          {mode === "owner" && (
+            <Link
+              href={`/story/${data.storyId}/share`}
+              className="rounded-button px-3 py-2 font-sans text-sm text-cinema-text/80 hover:text-cinema-text"
+            >
+              Share
+            </Link>
+          )}
           {mode === "owner" && (
             <button
               type="button"
@@ -193,23 +228,47 @@ export function ExperiencePlayer({
             chrome ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
-          <input
-            type="range"
-            className="scrub w-full"
-            min={0}
-            max={data.totalS}
-            step={0.1}
-            value={Math.min(t, data.totalS)}
-            aria-label="Scrub through the story"
-            onPointerDown={() => {
-              wasPlaying.current = playing;
-              timeline.pause();
-            }}
-            onPointerUp={() => {
-              if (wasPlaying.current) timeline.play();
-            }}
-            onChange={(e) => timeline.seek(Number(e.target.value))}
-          />
+          {canReact && !ended && (
+            <div className="mb-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => openReaction(t)}
+                className="rounded-full border border-cinema-text/25 px-4 py-2 font-sans text-sm text-cinema-text/80 backdrop-blur-sm transition-colors duration-200 hover:text-cinema-text"
+              >
+                Leave a note
+              </button>
+            </div>
+          )}
+          <div className="relative">
+            <input
+              type="range"
+              className="scrub w-full"
+              min={0}
+              max={data.totalS}
+              step={0.1}
+              value={Math.min(t, data.totalS)}
+              aria-label="Scrub through the story"
+              onPointerDown={() => {
+                wasPlaying.current = playing;
+                timeline.pause();
+              }}
+              onPointerUp={() => {
+                if (wasPlaying.current) timeline.play();
+              }}
+              onChange={(e) => timeline.seek(Number(e.target.value))}
+            />
+            {/* owner-visible ticks where recipients pinned a reaction */}
+            {pins.map((p, i) => (
+              <span
+                key={i}
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 h-3 w-[2px] -translate-y-1/2 rounded-full bg-accent"
+                style={{
+                  left: `${Math.min(100, Math.max(0, (p / data.totalS) * 100))}%`,
+                }}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -219,6 +278,15 @@ export function ExperiencePlayer({
           currentId={musicId}
           onPick={onPickMusic}
           onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      {/* ---------------------------------------------------- reaction composer */}
+      {composerOpen && token && (
+        <ReactionComposer
+          token={token}
+          timestampOffsetS={pinAt}
+          onClose={() => setComposerOpen(false)}
         />
       )}
     </div>
@@ -398,9 +466,11 @@ function TitleCard({
 function ClosingCard({
   data,
   onReplay,
+  onReact,
 }: {
   data: ExperienceData;
   onReplay: () => void;
+  onReact?: () => void;
 }) {
   return (
     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-7 px-8 text-center animate-[titleIn_1000ms_var(--ease-keepsake)_both]">
@@ -412,6 +482,15 @@ function ClosingCard({
       <p className="small-caps text-cinema-text/70">
         Told by {data.tellerName ?? "someone who loves you"}
       </p>
+      {onReact && (
+        <button
+          type="button"
+          onClick={onReact}
+          className="inline-flex min-h-[48px] items-center rounded-full bg-accent-strong px-7 py-3 font-sans text-base font-medium text-paper shadow-soft transition-colors duration-300 ease-keepsake hover:bg-accent active:bg-accent-press"
+        >
+          Leave a note
+        </button>
+      )}
       <button
         type="button"
         onClick={onReplay}

@@ -6,6 +6,7 @@ import { recordings, stories } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { deleteBlobs } from "@/lib/blob";
 import { transcribeUrl } from "@/lib/deepgram";
+import { logEvent } from "@/lib/analytics";
 
 export type RecordingRow = typeof recordings.$inferSelect;
 
@@ -53,6 +54,11 @@ export async function addTextSegment(
     })
     .returning();
 
+  await logEvent("recording_completed", {
+    storyId,
+    ownerId: userId,
+    meta: { source, mode: "typed" },
+  });
   return row;
 }
 
@@ -83,6 +89,12 @@ export async function transcribeAndSaveSegment(input: {
       questionId: input.questionId ?? null,
     })
     .returning();
+
+  await logEvent("recording_completed", {
+    storyId: input.storyId,
+    ownerId: userId,
+    meta: { source: input.source ?? "initial", mode: "voice" },
+  });
 
   try {
     const { transcript, words } = await transcribeUrl(input.audioUrl);

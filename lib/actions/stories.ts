@@ -1,12 +1,13 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { media, reactions, recordings, stories } from "@/db/schema";
 import { deleteBlobs } from "@/lib/blob";
 import { ensureProfile, requireUserId } from "@/lib/auth";
+import { logEvent } from "@/lib/analytics";
 
 /**
  * Step 1 of the creator flow: capture the working title and create a draft
@@ -17,6 +18,12 @@ export async function createDraftStory(formData: FormData): Promise<void> {
   const userId = await ensureProfile();
   const rawTitle = String(formData.get("title") ?? "").trim();
 
+  // Is this the teller's second (or later) story? The strongest signal (spec §11).
+  const [{ value: priorCount }] = await db
+    .select({ value: count() })
+    .from(stories)
+    .where(eq(stories.ownerId, userId));
+
   const [story] = await db
     .insert(stories)
     .values({
@@ -25,6 +32,10 @@ export async function createDraftStory(formData: FormData): Promise<void> {
       status: "draft",
     })
     .returning({ id: stories.id });
+
+  if (priorCount >= 1) {
+    await logEvent("second_story_started", { storyId: story.id, ownerId: userId });
+  }
 
   redirect(`/new/${story.id}`);
 }

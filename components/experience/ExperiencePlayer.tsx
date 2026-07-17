@@ -8,6 +8,7 @@ import type {
 } from "@/lib/experience";
 import { MUSIC_TRACKS } from "@/lib/music";
 import { selectMusicTrack } from "@/lib/actions/experience";
+import { trackEvent } from "@/lib/actions/analytics";
 import { cn } from "@/lib/cn";
 import { ReactionComposer } from "./ReactionComposer";
 import { useMusic } from "./useMusic";
@@ -28,6 +29,7 @@ export function ExperiencePlayer({
   mode,
   token,
   pins = [],
+  embedded = false,
 }: {
   data: ExperienceData;
   mode: Mode;
@@ -35,6 +37,8 @@ export function ExperiencePlayer({
   token?: string;
   /** Pinned reaction timestamps (seconds) shown as scrub-bar ticks (owner). */
   pins?: number[];
+  /** Fill the parent (for the landing sample) instead of the full viewport. */
+  embedded?: boolean;
 }) {
   const timeline = useTimeline(data.segments, data.totalS);
   const { t, playing, started, ended } = timeline;
@@ -71,6 +75,15 @@ export function ExperiencePlayer({
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
+
+  // A recipient reaching the closing card is the watch-to-end signal (spec §11).
+  const completedRef = useRef(false);
+  useEffect(() => {
+    if (ended && canReact && !completedRef.current) {
+      completedRef.current = true;
+      trackEvent("recipient_completed", data.storyId).catch(() => {});
+    }
+  }, [ended, canReact, data.storyId]);
 
   // Chrome is always present when idle, paused, ended, or the picker is open;
   // while the story plays it fades until the next tap reveals it.
@@ -117,7 +130,12 @@ export function ExperiencePlayer({
   );
 
   return (
-    <div className="relative h-dvh w-full select-none overflow-hidden bg-cinema text-cinema-text">
+    <div
+      className={cn(
+        "relative w-full select-none overflow-hidden bg-cinema text-cinema-text",
+        embedded ? "h-full" : "h-dvh",
+      )}
+    >
       {/* ---------------------------------------------------- photo backdrops */}
       <div className="absolute inset-0" onPointerDown={onStageTap}>
         <Backdrop

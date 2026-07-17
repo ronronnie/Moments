@@ -1,14 +1,15 @@
 import { UserButton } from "@clerk/nextjs";
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq, inArray, sql } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
-import { stories } from "@/db/schema";
+import { reactions, shareLinks, stories } from "@/db/schema";
 import { ensureProfile } from "@/lib/auth";
 import { Button } from "@/components/ui";
+import { StoryCard } from "@/components/stories/StoryCard";
 
-// My stories (/stories) — the post-sign-in landing. Prompt 8 turns this into a
-// warm shelf of keepsake cards; for now it lists real rows so downstream phases
-// have something to build against.
+// My stories (/stories) — a warm shelf of keepsakes (spec Prompt 8), each with
+// its shared/draft state and view + response counts. Deliberately not a
+// calendar, timeline, or streak — a bookshelf, not a dashboard.
 export default async function StoriesPage() {
   const userId = await ensureProfile();
 
@@ -17,6 +18,31 @@ export default async function StoriesPage() {
     .from(stories)
     .where(eq(stories.ownerId, userId))
     .orderBy(desc(stories.updatedAt));
+
+  const ids = myStories.map((s) => s.id);
+
+  // Views (summed across a story's links) and response counts, in two grouped
+  // queries then merged — cheap for a personal shelf.
+  const [viewRows, reactionRows] = ids.length
+    ? await Promise.all([
+        db
+          .select({
+            storyId: shareLinks.storyId,
+            views: sql<number>`coalesce(sum(${shareLinks.viewCount}), 0)::int`,
+          })
+          .from(shareLinks)
+          .where(inArray(shareLinks.storyId, ids))
+          .groupBy(shareLinks.storyId),
+        db
+          .select({ storyId: reactions.storyId, responses: count() })
+          .from(reactions)
+          .where(inArray(reactions.storyId, ids))
+          .groupBy(reactions.storyId),
+      ])
+    : [[], []];
+
+  const views = new Map(viewRows.map((r) => [r.storyId, r.views]));
+  const responses = new Map(reactionRows.map((r) => [r.storyId, Number(r.responses)]));
 
   return (
     <main className="mx-auto w-full max-w-md px-6 py-10">
@@ -39,20 +65,15 @@ export default async function StoriesPage() {
       ) : (
         <ul className="space-y-3">
           {myStories.map((s) => (
-            <li key={s.id}>
-              <Link
-                href={`/story/${s.id}`}
-                className="block rounded-card border border-hairline bg-paper-raised p-6 shadow-soft transition-colors duration-300 ease-keepsake hover:border-ink-soft"
-              >
-                <p className="font-serif text-xl text-ink">
-                  {s.title ?? "Untitled story"}
-                </p>
-                <p className="mt-1 font-sans text-xs uppercase tracking-[0.12em] text-ink-soft">
-                  {s.status}
-                  {s.storyDateText ? ` · ${s.storyDateText}` : ""}
-                </p>
-              </Link>
-            </li>
+            <StoryCard
+              key={s.id}
+              id={s.id}
+              title={s.title}
+              status={s.status}
+              dateText={s.storyDateText}
+              views={views.get(s.id) ?? 0}
+              responses={responses.get(s.id) ?? 0}
+            />
           ))}
         </ul>
       )}

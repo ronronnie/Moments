@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
 import { getExperienceForOwner } from "@/lib/experience";
 import { listReactionPins } from "@/lib/reactions";
+import { logEvent } from "@/lib/analytics";
 import { ExperiencePlayer } from "@/components/experience/ExperiencePlayer";
 
 // The owner's preview of the experience (spec §4 step 7, F7): the story played
@@ -21,6 +22,7 @@ export default async function PreviewPage({
   if (!data) return <NothingToPlay storyId={id} />;
 
   const pins = await listReactionPins(id, userId);
+  await logEvent("preview_reached", { storyId: id, ownerId: userId });
 
   return <ExperiencePlayer data={data} mode="owner" pins={pins} />;
 }

@@ -4,6 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { reactions, shareLinks, stories } from "@/db/schema";
 import { notifyReaction } from "@/lib/email";
+import { logEvent } from "@/lib/analytics";
 
 /**
  * A recipient's response (spec F8): a written message, an emoji pinned to a
@@ -62,6 +63,11 @@ export async function submitReaction(
     audioPath: input.kind === "voice" ? (input.audioUrl ?? null) : null,
     timestampOffsetS,
     reactorName,
+  });
+
+  await logEvent("reaction_left", {
+    storyId: link.storyId,
+    meta: { kind: input.kind },
   });
 
   // Tell the owner — best effort, never blocks the response.

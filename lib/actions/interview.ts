@@ -4,6 +4,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { questions, recordings, stories, type StoryContext } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { logEvent } from "@/lib/analytics";
 import { completeJson } from "@/lib/claude";
 import {
   CONTEXT_EXTRACTION_SYSTEM,
@@ -176,16 +177,20 @@ export async function answerQuestionText(
     .update(questions)
     .set({ status: "answered" })
     .where(eq(questions.id, questionId));
+
+  await logEvent("question_answered", { storyId, ownerId: userId, meta: { mode: "typed" } });
 }
 
 /** Mark a question answered after a voice reply was uploaded + transcribed. */
 export async function markQuestionAnswered(questionId: string): Promise<void> {
   const userId = await requireUserId();
-  await assertQuestionOwner(questionId, userId);
+  const { storyId } = await assertQuestionOwner(questionId, userId);
   await db
     .update(questions)
     .set({ status: "answered" })
     .where(eq(questions.id, questionId));
+
+  await logEvent("question_answered", { storyId, ownerId: userId, meta: { mode: "voice" } });
 }
 
 /**

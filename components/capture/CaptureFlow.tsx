@@ -11,6 +11,7 @@ import {
   type RecordingRow,
 } from "@/lib/actions/recordings";
 import { updateStoryTitle } from "@/lib/actions/stories";
+import { trackEvent } from "@/lib/actions/analytics";
 import { Recorder } from "./Recorder";
 import { TranscriptSegment } from "./TranscriptSegment";
 import type { ClientSegment } from "./types";
@@ -205,6 +206,7 @@ export function CaptureFlow({
             <Recorder
               onComplete={handleRecordingComplete}
               onError={(text) => setToast({ variant: "error", text })}
+              onStart={() => trackEvent("recording_started", storyId).catch(() => {})}
               remainingS={remainingS}
             />
           )}

@@ -4,6 +4,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { reactions, shareLinks, stories } from "@/db/schema";
 import { notifyFirstView } from "@/lib/email";
+import { logEvent } from "@/lib/analytics";
 
 /**
  * Server-only reads for the reaction loop (spec F8). Recipient writes go through
@@ -60,6 +61,8 @@ export async function recordShareView(token: string): Promise<void> {
       .set({ viewCount: sql`${shareLinks.viewCount} + 1` })
       .where(eq(shareLinks.id, link.id))
       .returning({ viewCount: shareLinks.viewCount });
+
+    await logEvent("recipient_viewed", { storyId: link.storyId });
 
     if (updated?.viewCount === 1) {
       const [story] = await db

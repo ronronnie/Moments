@@ -36,6 +36,20 @@ export const questionStatus = pgEnum("question_status", [
 export const mediaType = pgEnum("media_type", ["photo", "clip"]);
 export const reactionKind = pgEnum("reaction_kind", ["text", "emoji", "voice"]);
 
+// Success-metric events (spec §11). The whole funnel, from telling to a
+// recipient completing the story and the teller starting a second one.
+export const eventName = pgEnum("event_name", [
+  "recording_started",
+  "recording_completed",
+  "question_answered",
+  "preview_reached",
+  "shared",
+  "recipient_viewed",
+  "recipient_completed",
+  "reaction_left",
+  "second_story_started",
+]);
+
 /* ------------------------------------------------------------- profiles */
 export const profiles = pgTable("profiles", {
   // = Clerk user id. Upserted on first sign-in.
@@ -197,4 +211,25 @@ export const reactions = pgTable("reactions", {
 }, (t) => [
   index("reactions_story_id_idx").on(t.storyId),
   index("reactions_share_link_id_idx").on(t.shareLinkId),
+]);
+
+/* --------------------------------------------------------------- events */
+// Lightweight analytics for the success metrics (spec §11). Best-effort — a
+// failed insert never blocks a user action. story_id is nullable and set-null
+// on delete so metrics survive a story being removed; recipient events have no
+// owner. `meta` carries small extras (e.g. reaction kind, question id).
+export const events = pgTable("events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: eventName("name").notNull(),
+  storyId: uuid("story_id").references(() => stories.id, {
+    onDelete: "set null",
+  }),
+  ownerId: text("owner_id"),
+  meta: jsonb("meta").$type<Record<string, string | number>>(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (t) => [
+  index("events_name_idx").on(t.name),
+  index("events_story_id_idx").on(t.storyId),
 ]);

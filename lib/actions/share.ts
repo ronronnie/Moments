@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { shareLinks, stories } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { logEvent } from "@/lib/analytics";
 
 /**
  * Private sharing (spec F8). A story is shared through an unguessable, revocable
@@ -70,6 +71,7 @@ export async function ensureShareLink(storyId: string): Promise<string> {
     .set({ status: "shared", updatedAt: new Date() })
     .where(eq(stories.id, storyId));
 
+  await logEvent("shared", { storyId, ownerId: userId });
   revalidatePath(`/story/${storyId}/share`);
   return token;
 }

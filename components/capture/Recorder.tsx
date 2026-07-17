@@ -48,16 +48,28 @@ function LevelMeter({
 export function Recorder({
   onComplete,
   onError,
+  onStart,
   remainingS = 600,
 }: {
   onComplete: (result: RecordingResult) => void;
   onError?: (message: string) => void;
+  /** Fired when a recording session begins (for analytics). */
+  onStart?: () => void;
   remainingS?: number;
 }) {
   const { status, elapsedS, level, supported, start, pause, resume, stop } =
     useRecorder({ onComplete, onError, maxSeconds: remainingS });
 
   const recording = status !== "idle";
+
+  const handlePrimary = () => {
+    if (recording) {
+      stop();
+    } else {
+      onStart?.();
+      start();
+    }
+  };
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -66,7 +78,7 @@ export function Recorder({
       <RecordButton
         recording={recording}
         disabled={!supported}
-        onClick={() => (recording ? stop() : start())}
+        onClick={handlePrimary}
         aria-label={recording ? "Finish this part" : "Start recording"}
       />
 
